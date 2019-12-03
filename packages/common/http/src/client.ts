@@ -6,15 +6,16 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {Injectable} from '@angular/core';
+import {Inject, Injectable, Optional} from '@angular/core';
 import {Observable, of} from 'rxjs';
 import {concatMap, filter, map} from 'rxjs/operators';
 
 import {HttpHandler} from './backend';
 import {HttpHeaders} from './headers';
-import {HttpParams, HttpParamsOptions} from './params';
+import {HTTP_PARAMETER_CODEC, HttpParameterCodec, HttpParams, HttpParamsOptions} from './params';
 import {HttpRequest} from './request';
 import {HttpEvent, HttpResponse} from './response';
+
 
 
 /**
@@ -98,7 +99,9 @@ export type HttpObserve = 'body'|'events'|'response';
  */
 @Injectable()
 export class HttpClient {
-  constructor(private handler: HttpHandler) {}
+  constructor(
+      private handler: HttpHandler,
+      @Optional() @Inject(HTTP_PARAMETER_CODEC) private httpParamCodec?: HttpParameterCodec) {}
 
   /**
    * Sends an `HTTPRequest` and returns a stream of `HTTPEvents`.
@@ -474,7 +477,11 @@ export class HttpClient {
         if (options.params instanceof HttpParams) {
           params = options.params;
         } else {
-          params = new HttpParams({fromObject: options.params} as HttpParamsOptions);
+          const paramOptions: HttpParamsOptions = {fromObject: options.params};
+          if (!!this.httpParamCodec) {
+            paramOptions.encoder = this.httpParamCodec;
+          }
+          params = new HttpParams(paramOptions);
         }
       }
 

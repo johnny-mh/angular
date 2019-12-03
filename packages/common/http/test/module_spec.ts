@@ -9,6 +9,7 @@
 import {HttpHandler} from '@angular/common/http/src/backend';
 import {HttpClient} from '@angular/common/http/src/client';
 import {HTTP_INTERCEPTORS, HttpInterceptor} from '@angular/common/http/src/interceptor';
+import {HTTP_PARAMETER_CODEC, HttpParameterCodec} from '@angular/common/http/src/params';
 import {HttpRequest} from '@angular/common/http/src/request';
 import {HttpEvent, HttpResponse} from '@angular/common/http/src/response';
 import {HttpTestingController} from '@angular/common/http/testing/src/api';
@@ -106,6 +107,29 @@ class ReentrantInterceptor implements HttpInterceptor {
         done();
       });
       injector.get(HttpTestingController).expectOne('/test').flush('ok!');
+    });
+    it('allows injecting custom http parameter encoder', done => {
+      class TestHttpParameterEncoder implements HttpParameterCodec {
+        encodeKey(key: string): string {
+          return key + 'a';
+        }
+        encodeValue(value: string): string {
+          return value + 'b';
+        }
+        decodeKey(key: string): string {
+          return key + 'a';
+        }
+        decodeValue(value: string): string {
+          return value + 'b';
+        }
+      }
+      TestBed.resetTestingModule();
+      injector = TestBed.configureTestingModule({
+        imports: [HttpClientTestingModule],
+        providers: [{provide: HTTP_PARAMETER_CODEC, useClass: TestHttpParameterEncoder}]
+      });
+      injector.get(HttpClient).get('/test', {params: {a: 'b'}}).subscribe(() => done());
+      injector.get(HttpTestingController).expectOne('/test?aa=bb').flush('ok!');
     });
   });
 }
